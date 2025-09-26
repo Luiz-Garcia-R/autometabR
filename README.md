@@ -57,25 +57,24 @@ Example of metadata:
 ## Main Workflow
 
 The recommended workflow guides users from raw data import to quality control and initial metabolite evaluation:
-  - metab.import() – Import and validate raw metabolomics data (raw_data + metadata).
-  - metab.normalize() – Normalize data, filter features, impute missing values, and remove outliers.
-  - metab.qc() – Generate QC plots including boxplots, PCA, and density distributions.
-  - metab.info() – Summarize general metabolite characteristics and group-level statistics.
+  - metabol.import() – Import and validate raw metabolomics data (raw_data + metadata).
+  - metabol.normalize() – Normalize data, filter features, impute missing values, and remove outliers.
+  - metabol.qc() – Generate QC plots including boxplots, PCA, and density distributions.
+  - metabol.info() – Summarize general metabolite characteristics and group-level statistics.
 
 
 # Exploratory and differential analysis
 For deeper insights and group comparisons:
-  - metab.corr() – Compute correlations among samples or experimental groups.
-  - metab.dems() – Identify differentially expressed metabolites between conditions.
-  - metab.dimred() – Perform dimensionality reduction using PCA and UMAP.
-  - metab.enrich() – Conduct metabolite set enrichment analysis.
-  - metab.heatmap() – Visualize top variable metabolites with heatmaps.
-  - metab.oplsda() – Evaluate group differences via OPLS-DA.
-  - metab.roc() – Assess the discriminatory power of specific metabolites.
-  - metab.ttest() – Perform t-tests or Mann-Whitney tests for metabolite-level differences.
-  - metab.venn() – Visualize overlaps between metabolite sets with Venn diagrams.
-  - metab.vip() – Highlight the most important metabolites contributing to group separation.
-  - metab.volcano() – Generate volcano plots for differential metabolite analysis.
+  - metabol.corr() – Compute correlations among samples or experimental groups.
+  - metabol.dems() – Identify differentially expressed metabolites between conditions.
+  - metabol.dimred() – Perform dimensionality reduction using PCA and UMAP.
+  - metabol.heatmap() – Visualize top variable metabolites with heatmaps.
+  - metabol.oplsda() – Evaluate group differences via OPLS-DA.
+  - metabol.roc() – Assess the discriminatory power of specific metabolites.
+  - metabol.ttest() – Perform t-tests or Mann-Whitney tests for metabolite-level differences.
+  - metabol.venn() – Visualize overlaps between metabolite sets with Venn diagrams.
+  - metabol.vip() – Highlight the most important metabolites contributing to group separation.
+  - metabol.volcano() – Generate volcano plots for differential metabolite analysis.
 
 
 ## Example (Minimal)
@@ -98,16 +97,16 @@ metadata <- data.frame(
 )
 
 # Import data
-obj <- metab.import(raw_data, metadata) # returns a metabR object
+obj <- metabol.import(raw_data, metadata) # returns a metabR object
 
 # Normalize
-normalized_data <- metab.normalize(obj)
+normalized_data <- metabol.normalize(obj)
 
 # QC plots
-metab.qc(normalized_data)
+metabol.qc(normalized_data)
 
 # Correlation
-corr_mat <- metab.corr(normalized_data, metadata)
+corr_mat <- metabol.corr(normalized_data, metadata)
 ```
 
 ## Contact

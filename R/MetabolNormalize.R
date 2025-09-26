@@ -118,6 +118,17 @@ metabol.normalize <- function(imp_data, method = "log2",
     expr_data <- expr_data[, !remove_idx, drop = FALSE]
   }
 
+  # --- Presence/absence per group ---
+  if (ncol(expr_data) > 0) {
+    presence_per_group <- t(apply(expr_data, 2, function(x)
+      tapply(x, groups, function(vals) as.integer(any(vals > 0)))
+    ))
+    presence_per_group <- as.data.frame(presence_per_group, check.names = FALSE)
+    presence_per_group <- cbind(Metabolite = colnames(expr_data), presence_per_group)
+  } else {
+    presence_per_group <- data.frame()
+  }
+
   # --- Initialize normalized matrix ---
   if (ncol(expr_data) == 0) {
     norm_matrix <- data.frame(matrix(nrow = nrow(expr_data), ncol = 0))
@@ -161,24 +172,29 @@ metabol.normalize <- function(imp_data, method = "log2",
     if (collapse_correlated && ncol(norm_matrix) > 1) {
       cor_mat <- stats::cor(norm_matrix, use = "pairwise.complete.obs")
       high_cor <- which(abs(cor_mat) >= cor_threshold & row(cor_mat) < col(cor_mat), arr.ind = TRUE)
+
       if (nrow(high_cor) > 0) {
         for (idx in seq_len(nrow(high_cor))) {
-          c1 <- high_cor[idx, 1]
-          c2 <- high_cor[idx, 2]
-          norm_matrix[[c1]] <- rowMeans(norm_matrix[, c(c1, c2)], na.rm = TRUE)
-          norm_matrix <- norm_matrix[, -c2, drop = FALSE]
+          c1_name <- colnames(cor_mat)[high_cor[idx, 1]]
+          c2_name <- colnames(cor_mat)[high_cor[idx, 2]]
+
+          if (c1_name %in% colnames(norm_matrix) && c2_name %in% colnames(norm_matrix)) {
+            norm_matrix[[c1_name]] <- rowMeans(norm_matrix[, c(c1_name, c2_name)], na.rm = TRUE)
+            norm_matrix <- norm_matrix[, !(names(norm_matrix) %in% c2_name), drop = FALSE]
+          }
         }
       }
     }
-  }
 
   # --- Build final object ---
   normalized_df <- cbind(Sample = raw_data[[names(raw_data)[col_sample]]][sample_idx], norm_matrix)
+  rownames(normalized_df) <- normalized_df[,1]
 
   obj <- list(
     expr_matrix = normalized_df,
     raw_preserved = raw_data,
-    method = method
+    method = method,
+    presence_per_group = presence_per_group
   )
   class(obj) <- "metabolNorm"
 
@@ -200,4 +216,5 @@ print.metabolNorm <- function(x, ...) {
   message("Normalization method: ", x$method)
   message("------------------------------")
   invisible(x)
+  }
 }

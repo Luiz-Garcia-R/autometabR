@@ -15,10 +15,10 @@ analysis. This help topic serves as a quick reference and guide for users.
 
 The recommended workflow guides users from raw data import to quality control and initial metabolite evaluation:
 \itemize{
-\item metab.import() – Import and validate raw metabolomics data (raw_data + metadata).
-\item metab.normalize() – Normalize imported data (imp_data), filter features, impute missing values, and remove outliers.
-\item metab.qc() – Generate QC plots including boxplots, PCA, and density distributions.
-\item metab.info() – Summarize general metabolite characteristics and group-level statistics.
+\item metabol.import() – Import and validate raw metabolomics data (raw_data + metadata).
+\item metabol.normalize() – Normalize imported data (imp_data), filter features, impute missing values, and remove outliers.
+\item metabol.qc() – Generate QC plots including boxplots, PCA, and density distributions.
+\item metabol.info() – Summarize general metabolite characteristics and group-level statistics.
 }
 
 Main Functions Overview\tabular{ll}{

@@ -15,10 +15,10 @@ metadata <- data.frame(
 
 plsda_res <- mixOmics::plsda(expr_mat, metadata$Group, ncomp = 2)
 
-dimred_obj <- list(
+dimred_data <- list(
   expr_matrix = expr_mat,
   metadata    = metadata,
   res_dimred  = list(plsda_res = plsda_res)
 )
 
-metabol.vip(dimred_obj, n_top = 3, component = 1, plot = TRUE)
+metabol.vip(dimred_data, n_top = 3, component = 1, plot = TRUE)

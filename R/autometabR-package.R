@@ -8,10 +8,10 @@
 #' ## Main Workflow
 #'
 #' The recommended workflow guides users from raw data import to quality control and initial metabolite evaluation:
-#'  - metab.import() – Import and validate raw metabolomics data (raw_data + metadata).
-#'  - metab.normalize() – Normalize imported data (imp_data), filter features, impute missing values, and remove outliers.
-#'  - metab.qc() – Generate QC plots including boxplots, PCA, and density distributions.
-#'  - metab.info() – Summarize general metabolite characteristics and group-level statistics.
+#'  - metabol.import() – Import and validate raw metabolomics data (raw_data + metadata).
+#'  - metabol.normalize() – Normalize imported data (imp_data), filter features, impute missing values, and remove outliers.
+#'  - metabol.qc() – Generate QC plots including boxplots, PCA, and density distributions.
+#'  - metabol.info() – Summarize general metabolite characteristics and group-level statistics.
 #'
 #'
 #'

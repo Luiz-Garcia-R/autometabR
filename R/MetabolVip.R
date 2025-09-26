@@ -4,7 +4,7 @@
 #' object contained in a dimensionality reduction result, plots top VIPs and
 #' a heatmap across groups, and optionally calculates AUC for each variable.
 #'
-#' @param dimred_input Object from metabol.dimred().
+#' @param dimred_data Object from metabol.dimred().
 #' @param top_n Integer, number of top metabolites to display. Default = 20.
 #' @param component Integer, which component to extract VIP scores from. Default = 1.
 #' @param plot Logical, whether to generate a bar plot. Default = TRUE.
@@ -33,13 +33,13 @@
 #'
 #' plsda_res <- mixOmics::plsda(expr_mat, metadata$Group, ncomp = 2)
 #'
-#' dimred_obj <- list(
+#' dimred_data <- list(
 #'   expr_matrix = expr_mat,
 #'   metadata    = metadata,
 #'   res_dimred  = list(plsda_res = plsda_res)
 #' )
 #'
-#' metabol.vip(dimred_obj, n_top = 3, component = 1, plot = TRUE)
+#' metabol.vip(dimred_data, n_top = 3, component = 1, plot = TRUE)
 #' }
 #'
 #' @references
@@ -48,7 +48,7 @@
 #'
 #' @export
 
-metabol.vip <- function(dimred_input, top_n = 20, component = 1, plot = TRUE,
+metabol.vip <- function(dimred_data, top_n = 20, component = 1, plot = TRUE,
                         calc_auc = FALSE, group_col = "Group",
                         assign_result = TRUE, assign_name = "vip_data",
                         envir = parent.frame()) {
@@ -62,10 +62,10 @@ metabol.vip <- function(dimred_input, top_n = 20, component = 1, plot = TRUE,
   }
 
   # --- Detectar se é objeto completo ou apenas dimred_obj ---
-  if ("dimred_obj" %in% names(dimred_input)) {
-    obj <- dimred_input$dimred_obj
+  if ("dimred_obj" %in% names(dimred_data)) {
+    obj <- dimred_data$dimred_obj
   } else {
-    obj <- dimred_input
+    obj <- dimred_data
   }
 
   # --- Check object structure ---
