@@ -1,6 +1,6 @@
 Package: autometabR
 Title: Comprehensive Metabolomics Data Analysis and Visualization
-Version: 0.0.4
+Version: 0.0.5
 Authors@R: 
     person("Luiz", "Garcia", 
            email = "luiz.cardoso@ufpr.br", 
