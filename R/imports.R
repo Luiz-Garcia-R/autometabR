@@ -1,10 +1,10 @@
 # R/imports.R
 
 #' @keywords internal
-# --- Funções importadas ---
+# --- Imported functions ---
 
 # stats
-#' @importFrom stats aggregate cor median quantile rnorm sd setNames reorder
+#' @importFrom stats aggregate cor median quantile rnorm sd setNames reorder shapiro.test t.test aov
 
 # graphics
 #' @importFrom graphics abline grid mtext par text

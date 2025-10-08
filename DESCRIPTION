@@ -22,9 +22,11 @@ Imports:
     dplyr,
     ggplot2,
     mixOmics,
+    multcompView,
     pROC,
     patchwork,
     ropls,
+    rstatix,
     stats,
     tidyr,
     utils

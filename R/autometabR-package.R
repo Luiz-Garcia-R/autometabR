@@ -30,6 +30,7 @@
 #' | `metabol.oplsda()`   | Group separation via OPLS-DA |
 #' | `metabol.roc()`      | ROC curves for discriminant metabolites |
 #' | `metabol.ttest()`    | T-test or Mann-Whitney test |
+#' | `metabol.anova()`    | ANOVA or Kruskal-Wallis test |
 #' | `metabol.venn()`     | Overlap visualization with Venn diagrams |
 #' | `metabol.vip()`      | Highlight top contributing metabolites |
 #'

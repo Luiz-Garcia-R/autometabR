@@ -35,6 +35,7 @@ Main Functions Overview\tabular{ll}{
    \code{metabol.oplsda()} \tab Group separation via OPLS-DA \cr
    \code{metabol.roc()} \tab ROC curves for discriminant metabolites \cr
    \code{metabol.ttest()} \tab T-test or Mann-Whitney test \cr
+   \code{metabol.anova()} \tab ANOVA or Kruskal-Wallis test \cr
    \code{metabol.venn()} \tab Overlap visualization with Venn diagrams \cr
    \code{metabol.vip()} \tab Highlight top contributing metabolites \cr
 }
