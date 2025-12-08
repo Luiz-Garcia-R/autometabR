@@ -47,7 +47,7 @@
 #'
 #' @export
 
-metabol.oplsda <- function(normalized_data, metadata,
+metabol.oplsda <- function(normalized_data, metadata = NULL,
                            group_col = "Group",
                            predI = 1, orthoI = NA,
                            crossvalI = 5, permI = 100,
@@ -62,66 +62,92 @@ metabol.oplsda <- function(normalized_data, metadata,
   }
 
   # --- Expression matrix ---
-  if(inherits(normalized_data, "metabolNorm")){
+  if (inherits(normalized_data, "metabolNorm")) {
     expr_mat <- normalized_data$expr_matrix
-  } else if(is.matrix(normalized_data) || is.data.frame(normalized_data)){
-    expr_mat <- as.matrix(normalized_data)
+  } else if (is.matrix(normalized_data) || is.data.frame(normalized_data)) {
+    expr_mat <- normalized_data
   } else {
-    stop("Input must be a 'metabolNorm' object or a numeric matrix/data.frame.")
+    stop("Input must be a metabolNorm object or matrix/data.frame")
   }
 
-  # --- Remove Sample column if exists ---
-  if("Sample" %in% colnames(expr_mat)){
+  expr_mat <- as.matrix(expr_mat)
+
+  # --- Remove Sample column ---
+  if ("Sample" %in% colnames(expr_mat)) {
     expr_mat <- expr_mat[, setdiff(colnames(expr_mat), "Sample"), drop = FALSE]
   }
 
-  # --- Metadata ---
-  if(!group_col %in% colnames(metadata)) stop("group_col not found in metadata.")
-  if(!"Sample" %in% colnames(metadata)) stop("metadata must have a 'Sample' column.")
-
-  # --- Align samples ---
-  if(is.null(rownames(expr_mat))){
-    rownames(expr_mat) <- metadata$Sample
+  # --- Detect metadata automatically ---
+  if (is.null(metadata)) {
+    if (!is.null(normalized_data$metadata)) {
+      metadata <- normalized_data$metadata
+      message("Using metadata stored inside normalized_data.")
+    } else {
+      stop("Metadata not provided and not found inside normalized_data.")
+    }
   }
 
+  # --- Checks ---
+  if (!"Sample" %in% colnames(metadata))
+    stop("metadata must contain a 'Sample' column.")
+
+  if (!group_col %in% colnames(metadata))
+    stop(sprintf("metadata must contain '%s'.", group_col))
+
+  # --- Align samples ---
   common_samples <- intersect(rownames(expr_mat), metadata$Sample)
-  if(length(common_samples) == 0){
-    stop(sprintf("No matching samples found. expr_mat rownames: %s | metadata$Sample: %s",
-                 paste(utils::head(rownames(expr_mat),5), collapse=", "),
-                 paste(utils::head(metadata$Sample,5), collapse=", ")))
+  if (length(common_samples) == 0) {
+    stop("No shared sample names between expression matrix and metadata.")
   }
 
   expr_mat <- expr_mat[common_samples, , drop = FALSE]
-  groups <- as.factor(metadata[[group_col]][match(common_samples, metadata$Sample)])
+  metadata <- metadata[match(common_samples, metadata$Sample), , drop = FALSE]
 
-  # --- Convert to numeric ---
-  expr_mat <- apply(expr_mat, 2, as.numeric)
+  groups <- as.factor(metadata[[group_col]])
+
+  # --- Ensure numeric expression matrix ---
+  expr_mat <- as.matrix(expr_mat)
+  storage.mode(expr_mat) <- "numeric"
+
+  # --- Remove zero-variance variables ---
+  nzv <- apply(expr_mat, 2, sd, na.rm = TRUE) > 0
+  expr_mat <- expr_mat[, nzv, drop = FALSE]
 
   # --- Run OPLS-DA ---
   set.seed(123)
-  oplsda_res <- ropls::opls(x = expr_mat, y = groups,
-                            predI = predI, orthoI = orthoI,
-                            crossvalI = crossvalI, permI = permI)
+  oplsda_res <- ropls::opls(
+    x = expr_mat,
+    y = groups,
+    predI = predI,
+    orthoI = orthoI,
+    crossvalI = crossvalI,
+    permI = permI
+  )
 
   # --- Scores dataframe ---
   scores_df <- as.data.frame(oplsda_res@scoreMN)
-  if(ncol(scores_df) == 1){
+
+  if (ncol(scores_df) == 1) {
     colnames(scores_df) <- "comp1"
     scores_df$ortho1 <- 0
   } else {
     colnames(scores_df) <- c("comp1", "ortho1")
   }
+
   scores_df$Group <- groups
 
   # --- Plot ---
   p <- NULL
-  if(plot){
+  if (plot) {
     p <- ggplot2::ggplot(scores_df, ggplot2::aes(x = comp1, y = ortho1, color = Group)) +
       ggplot2::geom_point(size = 3, alpha = 0.7) +
       ggplot2::theme_minimal(base_size = 14) +
-      ggplot2::labs(title = "OPLS-DA Scores",
-                    x = "Predictive Component", y = "Orthogonal Component",
-                    color = "Group")
+      ggplot2::labs(
+        title = "OPLS-DA Scores",
+        x = "Predictive Component",
+        y = "Orthogonal Component",
+        color = "Group"
+      )
     print(p)
   }
 
@@ -131,4 +157,3 @@ metabol.oplsda <- function(normalized_data, metadata,
     plot = p
   ))
 }
-

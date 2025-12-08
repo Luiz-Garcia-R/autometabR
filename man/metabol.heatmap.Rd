@@ -6,7 +6,7 @@
 \usage{
 metabol.heatmap(
   normalized_data,
-  metadata,
+  metadata = NULL,
   group_colname = "Group",
   top_n = 100,
   cluster_rows = TRUE,
@@ -14,6 +14,7 @@ metabol.heatmap(
   show_rownames = FALSE,
   show_colnames = TRUE,
   palette = (grDevices::colorRampPalette(c("navy", "white", "firebrick3")))(100),
+  diff_results = NULL,
   results = FALSE,
   assign_result = FALSE,
   assign_name = "heatmap_data",
@@ -40,6 +41,8 @@ or a numeric data.frame/matrix (samples x metabolites).}
 
 \item{palette}{Color palette for heatmap. Default blue-white-red.}
 
+\item{diff_results}{optional, use DEGs identified by \code{metabol.diff}.}
+
 \item{results}{Logical, whether to return a list with z-score matrix and top metabolites. Default FALSE.}
 
 \item{assign_result}{Logical, whether to assign the result object to the environment. Default FALSE.}
@@ -63,15 +66,34 @@ Useful for visualizing patterns of variation across samples or groups.
 }
 \examples{
 # Minimal example
-expr_mat <- matrix(rnorm(20), nrow = 5, ncol = 4)
-rownames(expr_mat) <- paste0("S", 1:5)
-colnames(expr_mat) <- paste0("Met", 1:4)
+set.seed(123)
+
+expr_mat <- matrix(rnorm(48), nrow = 6)
+rownames(expr_mat) <- paste0("S", 1:6)
+colnames(expr_mat) <- paste0("M", 1:8)
+
 meta <- data.frame(
-  Sample = paste0("S", 1:5),
-  Group = c("A","A","B","B","B")
+  Sample = rownames(expr_mat),
+  Group  = rep(c("A","B"), each = 3)
 )
 
-metabol.heatmap(expr_mat, meta, top_n = 3, results = TRUE)
+minimal_norm <- list(
+  expr_matrix = data.frame(
+    Sample = rownames(expr_mat),
+    expr_mat,
+    check.names = FALSE
+  ),
+  metadata = meta,
+  method = "none"
+)
+class(minimal_norm) <- "metabolNorm"
+
+metabol.heatmap(
+  normalized_data = minimal_norm,
+  top_n = 3,
+  results = FALSE
+)
+
 
 }
 \references{

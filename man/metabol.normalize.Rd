@@ -6,7 +6,7 @@
 \usage{
 metabol.normalize(
   imp_data,
-  method = "log2",
+  method = "auto",
   remove_zeros = FALSE,
   remove_outliers = TRUE,
   impute = TRUE,
@@ -26,7 +26,19 @@ metabol.normalize(
 \arguments{
 \item{imp_data}{A \code{metabolR} object containing raw data (\code{data}) and metadata (\code{metadata}).}
 
-\item{method}{Normalization method: "log2" (default) or "log10".}
+\item{method}{Normalization method. Options:
+\itemize{
+\item \code{"auto"} – automatically selects the best normalization method based on
+coefficient of variation (CV) stability across groups.
+\item \code{"log2"} – log2 transformation.
+\item \code{"log10"} – log10 transformation.
+\item \code{"median"} – sample-wise median normalization.
+\item \code{"autoscale"} – z-score scaling.
+\item \code{"pareto"} – Pareto scaling.
+\item \code{"quantile"} – quantile normalization.
+\item \code{"pqn"} – probabilistic quotient normalization.
+}
+Default is \code{"auto"}.}
 
 \item{remove_zeros}{Logical, whether to remove metabolites that are all zeros. Default FALSE.}
 
@@ -40,9 +52,9 @@ metabol.normalize(
 
 \item{max_missing_prop_per_group}{Maximum allowed missing proportion per group. Default 0.5.}
 
-\item{pseudo_count}{Numeric vector or NULL, pseudo-count per metabolite. Default NULL (computed automatically).}
+\item{pseudo_count}{Numeric vector or NULL; pseudo-count per metabolite. Default NULL (computed automatically).}
 
-\item{clip_negative_log}{Logical, whether to clip negative values to zero before log transformation. Default TRUE.}
+\item{clip_negative_log}{Logical, whether to clip negative values to zero after log transformation. Default TRUE.}
 
 \item{collapse_correlated}{Logical, whether to collapse highly correlated metabolites. Default TRUE.}
 
@@ -54,14 +66,21 @@ metabol.normalize(
 
 \item{envir}{Environment where to assign the result if \code{assign_result = TRUE}. Default parent.frame().}
 
-\item{help}{Logical, if TRUE shows detailed information about the normalization steps instead of running them. Default FALSE.}
+\item{help}{Logical, if TRUE prints details about the method and exits. Default FALSE.}
 }
 \value{
-Invisibly returns a \code{metabolNorm} object with the normalized data, presence info, checks, and summary.
+Invisibly returns a \code{metabolNorm} object containing:
+\itemize{
+\item normalized expression matrix,
+\item metadata,
+\item preserved raw data,
+\item selected normalization method.
+}
 }
 \description{
-Normalizes metabolomics data, applies filtering, outlier removal, log transformation,
-global imputation, and optionally collapses highly correlated metabolites.
+Normalizes metabolomics data, applies filtering, outlier removal, optional automatic
+selection of the best normalization method, log transformation, global imputation,
+and optional collapsing of highly correlated metabolites.
 }
 \examples{
 # Minimal example

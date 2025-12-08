@@ -6,8 +6,9 @@
 \usage{
 metabol.qc(
   normalized_data,
-  metadata,
+  metadata = NULL,
   group_col = "Group",
+  corr_type = c("heatmap", "correlogram", "both"),
   cluster_rows = FALSE,
   cluster_cols = FALSE,
   angle_col = 45,
@@ -20,6 +21,8 @@ metabol.qc(
 \item{metadata}{Data.frame containing at least 'Sample' column and grouping column.}
 
 \item{group_col}{Character. Column name in \code{metadata} specifying the group/factor. Default "Group".}
+
+\item{corr_type}{Character. Select betwenn heatmap, correlogram or both.}
 
 \item{cluster_rows}{Logical. Whether to cluster rows in correlation heatmap. Default FALSE.}
 

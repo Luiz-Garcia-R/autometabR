@@ -30,3 +30,4 @@ print.metabolNorm <- function(x, ...) {
   message("Use functions like metabol.dimred(), metabol.corr(), metabol.heatmap() on this object.")
   invisible(x)
 }
+

@@ -12,6 +12,7 @@
 #' @param cluster_cols Logical, whether to cluster columns. Default TRUE.
 #' @param show_rownames Logical, show metabolite names. Default FALSE.
 #' @param show_colnames Logical, show sample names. Default TRUE.
+#' @param diff_results optional, use DEGs identified by \code{metabol.diff}.
 #' @param palette Color palette for heatmap. Default blue-white-red.
 #' @param results Logical, whether to return a list with z-score matrix and top metabolites. Default FALSE.
 #' @param assign_result Logical, whether to assign the result object to the environment. Default FALSE.
@@ -28,15 +29,34 @@
 #'
 #' @examples
 #' # Minimal example
-#' expr_mat <- matrix(rnorm(20), nrow = 5, ncol = 4)
-#' rownames(expr_mat) <- paste0("S", 1:5)
-#' colnames(expr_mat) <- paste0("Met", 1:4)
+#' set.seed(123)
+#'
+#' expr_mat <- matrix(rnorm(48), nrow = 6)
+#' rownames(expr_mat) <- paste0("S", 1:6)
+#' colnames(expr_mat) <- paste0("M", 1:8)
+#'
 #' meta <- data.frame(
-#'   Sample = paste0("S", 1:5),
-#'   Group = c("A","A","B","B","B")
+#'   Sample = rownames(expr_mat),
+#'   Group  = rep(c("A","B"), each = 3)
 #' )
 #'
-#' metabol.heatmap(expr_mat, meta, top_n = 3, results = TRUE)
+#' minimal_norm <- list(
+#'   expr_matrix = data.frame(
+#'     Sample = rownames(expr_mat),
+#'     expr_mat,
+#'     check.names = FALSE
+#'   ),
+#'   metadata = meta,
+#'   method = "none"
+#' )
+#' class(minimal_norm) <- "metabolNorm"
+#'
+#' metabol.heatmap(
+#'   normalized_data = minimal_norm,
+#'   top_n = 3,
+#'   results = FALSE
+#' )
+#'
 #'
 #' @references
 #' Eisen MB, Spellman PT, Brown PO, Botstein D (1998). Cluster analysis and display of genome-wide expression patterns. \emph{Proceedings of the National Academy of Sciences}, 95(25):14863–14868. <doi:10.1073/pnas.95.25.14863>
@@ -44,7 +64,8 @@
 #'
 #' @export
 
-metabol.heatmap <- function(normalized_data, metadata,
+metabol.heatmap <- function(normalized_data,
+                            metadata = NULL,
                             group_colname = "Group",
                             top_n = 100,
                             cluster_rows = TRUE,
@@ -52,82 +73,129 @@ metabol.heatmap <- function(normalized_data, metadata,
                             show_rownames = FALSE,
                             show_colnames = TRUE,
                             palette = grDevices::colorRampPalette(c("navy", "white", "firebrick3"))(100),
+                            diff_results = NULL,
                             results = FALSE,
                             assign_result = FALSE,
                             assign_name = "heatmap_data",
                             envir = parent.frame()) {
 
-  # --- Required package ---
-  if (!requireNamespace("pheatmap", quietly = TRUE)) stop("Please install the 'pheatmap' package.")
+  # ============================================================
+  # 0) Dependencies
+  # ============================================================
+  if (!requireNamespace("pheatmap", quietly = TRUE))
+    stop("Please install the 'pheatmap' package.")
 
-  # --- Extract expression matrix ---
-  expr_mat <- NULL
-  if (is.list(normalized_data)) {
-    if ("expr_matrix" %in% names(normalized_data)) {
-      expr_mat <- normalized_data$expr_matrix
+  # ============================================================
+  # 1) Extract metadata if not provided
+  # ============================================================
+  if (is.null(metadata)) {
+    if (!is.null(normalized_data$metadata)) {
+      metadata <- normalized_data$metadata
+      message("Using metadata stored inside normalized_data.")
     } else {
-      df_names <- grep("_normalized$", names(normalized_data), value = TRUE)
-      if (length(df_names) >= 1) {
-        tmp <- normalized_data[[df_names[1]]]
-        if (is.data.frame(tmp) && "Sample" %in% colnames(tmp)) {
-          expr_mat <- tmp
-          rownames(expr_mat) <- expr_mat$Sample
-          expr_mat$Sample <- NULL
-        }
-      }
-      if (is.null(expr_mat)) {
-        df_candidates <- Filter(function(x) is.data.frame(x) && "Sample" %in% colnames(x), normalized_data)
-        if (length(df_candidates) >= 1) {
-          tmp <- df_candidates[[1]]
-          expr_mat <- tmp
-          rownames(expr_mat) <- expr_mat$Sample
-          expr_mat$Sample <- NULL
-        }
-      }
-    }
-  } else if (is.data.frame(normalized_data) || is.matrix(normalized_data)) {
-    expr_mat <- as.data.frame(normalized_data, stringsAsFactors = FALSE, check.names = FALSE)
-    if ("Sample" %in% colnames(expr_mat)) {
-      rownames(expr_mat) <- expr_mat$Sample
-      expr_mat$Sample <- NULL
+      stop("No metadata provided and none found inside normalized_data.")
     }
   }
 
-  if (is.null(expr_mat)) stop("Invalid input: cannot extract expression matrix.")
+  # ============================================================
+  # 2) Extract expression matrix
+  # ============================================================
+  if (!inherits(normalized_data, "metabolNorm"))
+    stop("normalized_data must be a metabolNorm object.")
 
-  # --- Ensure numeric matrix ---
-  numeric_cols <- vapply(expr_mat, is.numeric, logical(1))
-  expr_mat <- expr_mat[, numeric_cols, drop = FALSE]
+  if (!"expr_matrix" %in% names(normalized_data))
+    stop("normalized_data is metabolNorm but contains no expr_matrix.")
+
+  expr_mat <- normalized_data$expr_matrix
+
+  if (!"Sample" %in% colnames(expr_mat))
+    stop("expr_matrix must contain a 'Sample' column.")
+
+  # Standardize
+  rownames(expr_mat) <- expr_mat$Sample
+  expr_mat$Sample <- NULL
+
+  # numeric-only
+  expr_mat <- expr_mat[, vapply(expr_mat, is.numeric, logical(1)), drop = FALSE]
   expr_mat <- as.matrix(expr_mat)
-  storage.mode(expr_mat) <- "numeric"
-  if (is.null(rownames(expr_mat))) stop("Expression matrix must have sample names as rownames.")
 
-  # --- Metadata checks ---
-  if (!"Sample" %in% colnames(metadata)) stop("`metadata` must contain a column named 'Sample'.")
-  if (!group_colname %in% colnames(metadata)) stop(sprintf("`metadata` must contain the column '%s'.", group_colname))
+  # ============================================================
+  # 3) Ranking using diff_results or fallback to variance
+  # ============================================================
+  top_metabs <- NULL
 
-  # --- Align samples ---
-  common_samples <- intersect(rownames(expr_mat), metadata$Sample)
-  if (length(common_samples) == 0) stop("No sample names match between metadata$Sample and expression matrix rownames.")
+  if (is.null(diff_results)) {
+    if (!is.null(normalized_data$limma_results) &&
+        !is.null(normalized_data$limma_results$results)) {
+
+      cand <- normalized_data$limma_results$results
+
+      if (all(c("Metabolite", "logFC") %in% colnames(cand))) {
+        diff_results <- cand
+        message("Using log2FC from normalized_data$limma_results to rank metabolites.")
+      }
+    }
+  }
+
+  if (!is.null(diff_results)) {
+
+    if (all(c("Metabolite", "logFC") %in% colnames(diff_results))) {
+
+      ranked <- diff_results[order(abs(diff_results$logFC), decreasing = TRUE), ]
+      top_metabs <- utils::head(ranked$Metabolite, top_n)
+
+    } else {
+      warning("diff_results provided but missing Metabolite/logFC columns. Ignoring.")
+      diff_results <- NULL
+    }
+  }
+
+  # Fallback = variance-based ranking
+  if (is.null(diff_results)) {
+
+    message("Tip: you can provide diff_results or run metabol.diff() to rank metabolites by log2FC.")
+
+    var_metabs <- apply(expr_mat, 2, stats::var, na.rm = TRUE)
+    var_metabs <- sort(var_metabs, decreasing = TRUE)
+
+    top_metabs <- names(var_metabs)[seq_len(min(top_n, length(var_metabs)))]
+  }
+
+  # ============================================================
+  # 4) Align metadata and samples
+  # ============================================================
+  if (!"Sample" %in% colnames(metadata))
+    stop("metadata must contain a 'Sample' column.")
+
+  if (!group_colname %in% colnames(metadata))
+    stop(sprintf("metadata must contain the column '%s'.", group_colname))
+
+  common_samples <- intersect(rownames(expr_mat), as.character(metadata$Sample))
+
+  if (length(common_samples) == 0)
+    stop("No overlapping sample names between metadata and expression matrix.")
+
   metadata_sub <- metadata[match(common_samples, metadata$Sample), , drop = FALSE]
   expr_mat <- expr_mat[common_samples, , drop = FALSE]
 
-  # --- Select top N metabolites ---
-  var_metabs <- apply(expr_mat, 2, stats::var, na.rm = TRUE)
-  n_sel <- min(top_n, length(var_metabs))
-  top_metabs <- names(sort(var_metabs, decreasing = TRUE))[1:n_sel]
-
-  # --- Z-score and transpose for pheatmap ---
+  # ============================================================
+  # 5) Z-score transform and transpose
+  # ============================================================
   z_mat <- scale(expr_mat[, top_metabs, drop = FALSE], center = TRUE, scale = TRUE)
   expr_z_top <- t(z_mat)
 
-  # --- Column annotation ---
+  # ============================================================
+  # 6) Column annotation
+  # ============================================================
   sample_groups <- metadata_sub[[group_colname]]
   names(sample_groups) <- metadata_sub$Sample
+
   ann_col <- data.frame(Group = as.factor(sample_groups[colnames(expr_z_top)]))
   rownames(ann_col) <- colnames(expr_z_top)
 
-  # --- Generate heatmap ---
+  # ============================================================
+  # 7) Heatmap
+  # ============================================================
   pheatmap::pheatmap(expr_z_top,
                      cluster_rows = cluster_rows,
                      cluster_cols = cluster_cols,
@@ -136,20 +204,24 @@ metabol.heatmap <- function(normalized_data, metadata,
                      annotation_col = ann_col,
                      color = palette,
                      border_color = NA,
-                     main = sprintf("Top %d Most Variable Metabolites", n_sel),
+                     main = sprintf("Top %d Metabolites", length(top_metabs)),
                      fontsize = 10)
 
-  # --- Return object ---
+  # ============================================================
+  # 8) Return object
+  # ============================================================
   result <- list(
     top_metabolites = top_metabs,
     expr_z_score = expr_z_top,
-    annotation_col = ann_col,
-    var_table = data.frame(Metabolite = names(var_metabs), Variance = var_metabs)[match(top_metabs, names(var_metabs)), , drop = FALSE]
+    annotation_col = ann_col
   )
 
-  if (assign_result) {
+  if (isTRUE(assign_result)) {
     assign(assign_name, result, envir = envir)
   }
 
-  if (results) return(result) else invisible(NULL)
+  if (isTRUE(results))
+    return(result)
+
+  invisible(NULL)
 }

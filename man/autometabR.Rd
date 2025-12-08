@@ -28,15 +28,13 @@ Main Functions Overview\tabular{ll}{
    \code{metabol.qc()} \tab QC plots: boxplots, PCA, density distributions \cr
    \code{metabol.info()} \tab Summarize metabolites and group statistics \cr
    \code{metabol.corr()} \tab Sample/group correlation matrices \cr
-   \code{metabol.dems()} \tab Identify differentially expressed metabolites \cr
-   \code{metabol.dimred()} \tab PCA and UMAP for dimensionality reduction \cr
+   \code{metabol.diff()} \tab Identify differentially expressed metabolites \cr
+   \code{metabol.dimred()} \tab PCA, UMAP and PLS-DA for dimensionality reduction \cr
    \code{metabol.enrich()} \tab Metabolite set enrichment analysis \cr
    \code{metabol.heatmap()} \tab Heatmap of top variable metabolites \cr
    \code{metabol.oplsda()} \tab Group separation via OPLS-DA \cr
    \code{metabol.roc()} \tab ROC curves for discriminant metabolites \cr
-   \code{metabol.ttest()} \tab T-test or Mann-Whitney test \cr
-   \code{metabol.anova()} \tab ANOVA or Kruskal-Wallis test \cr
-   \code{metabol.venn()} \tab Overlap visualization with Venn diagrams \cr
+   \code{metabol.boxplot()} \tab Boxplot based on log2FC difference \cr
    \code{metabol.vip()} \tab Highlight top contributing metabolites \cr
 }
 
@@ -78,11 +76,11 @@ imp_data <- metabol.import(raw_data, metadata)
 normalized <- metabol.normalize(imp_data)
 
 # QC
-metabol.qc(normalized, metadata)
+metabol.qc(normalized)
 
 # Exploratory and differential analysis
-metabol.corr(normalized, metadata)
-metabol.dems(normalized, metadata)
+metabol.corr(normalized)
+metabol.dimred(normalized)
 
 # Print summary of normalization
 print(normalized)

@@ -4,7 +4,7 @@
 \alias{metabol.info}
 \title{Metabolomics Dataset Summary}
 \usage{
-metabol.info(normalized_data, metadata, group_col = "Group")
+metabol.info(normalized_data, metadata = NULL, group_col = "Group")
 }
 \arguments{
 \item{normalized_data}{A list returned by \code{metabol.normalize()} containing \code{expr_matrix}.}

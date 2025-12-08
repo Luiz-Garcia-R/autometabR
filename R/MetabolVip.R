@@ -4,7 +4,7 @@
 #' object contained in a dimensionality reduction result, plots top VIPs and
 #' a heatmap across groups, and optionally calculates AUC for each variable.
 #'
-#' @param dimred_data Object from metabol.dimred().
+#' @param normalized_data Object from metabol.dimred().
 #' @param top_n Integer, number of top metabolites to display. Default = 20.
 #' @param component Integer, which component to extract VIP scores from. Default = 1.
 #' @param plot Logical, whether to generate a bar plot. Default = TRUE.
@@ -48,54 +48,99 @@
 #'
 #' @export
 
-metabol.vip <- function(dimred_data, top_n = 20, component = 1, plot = TRUE,
-                        calc_auc = FALSE, group_col = "Group",
-                        assign_result = TRUE, assign_name = "vip_data",
-                        envir = parent.frame()) {
+metabol.vip <- function(
+    normalized_data,
+    top_n = 20,
+    component = 1,
+    plot = TRUE,
+    calc_auc = FALSE,
+    group_col = "Group",
+    assign_result = TRUE,
+    assign_name = "vip_data",
+    envir = parent.frame()
+) {
 
-  # --- Pacotes ---
+  # ------------------------------
+  # 1) Required packages
+  # ------------------------------
   pkgs <- c("ggplot2", "dplyr", "tidyr", "patchwork", "pROC")
-  for(p in pkgs){
-    if(!requireNamespace(p, quietly = TRUE) && (p != "pROC" || calc_auc)) {
-      stop(sprintf("Please install '%s'", p))
+  for (p in pkgs) {
+    if (!requireNamespace(p, quietly = TRUE)) {
+      if (p != "pROC" || calc_auc) {
+        stop(sprintf("Please install '%s'", p))
+      }
     }
   }
 
-  # --- Detectar se é objeto completo ou apenas dimred_obj ---
-  if ("dimred_obj" %in% names(dimred_data)) {
-    obj <- dimred_data$dimred_obj
+  # ------------------------------
+  # 2) Detect object structure
+  # ------------------------------
+  obj <- if ("dimred_obj" %in% names(normalized_data)) {
+    normalized_data$dimred_obj
   } else {
-    obj <- dimred_data
+    normalized_data
   }
 
-  # --- Check object structure ---
-  if (!is.list(obj) || !all(c("expr_matrix","metadata","res_dimred") %in% names(obj))) {
-    stop("Input must be an object returned by metabol.dimred()")
+  if (is.null(obj$res_dimred$vip_scores)) {
+    stop("This object has no VIP scores. Run metabol.dimred() first.")
+  }
+
+  if (!is.list(obj) ||
+      !all(c("expr_matrix", "metadata", "res_dimred") %in% names(obj))) {
+    stop("Input must be an object returned by metabol.dimred().")
   }
 
   expr_mat <- obj$expr_matrix
   metadata <- obj$metadata
 
-  # --- VIP scores ---
-  if(!is.null(obj$vip_scores)){
-    vip_scores <- obj$vip_scores
-  } else {
+  # ------------------------------
+  # 3) Extract VIP scores
+  # ------------------------------
+  vip_scores <- obj$res_dimred$vip_scores
+  if (is.null(vip_scores)) {
     plsda_res <- obj$res_dimred$plsda_res
     vip_scores <- mixOmics::vip(plsda_res)
   }
 
-  if(is.null(vip_scores)) stop("No VIP scores found. Run metabol.dimred() first.")
+  if (is.null(vip_scores)) {
+    stop("No VIP scores found. Run metabol.dimred() first.")
+  }
+
+  if (component > ncol(vip_scores)) {
+    stop("Requested component exceeds number of components in VIP matrix.")
+  }
+
   vip_comp <- vip_scores[, component]
-  top_vip <- sort(vip_comp, decreasing = TRUE)[1:top_n]
 
-  df_vip <- data.frame(Metabolite = names(top_vip), VIP = top_vip)
+  n_top <- min(top_n, length(vip_comp))
+  top_vip <- sort(vip_comp, decreasing = TRUE)[seq_len(n_top)]
 
-  # --- Heatmap preparation ---
+  df_vip <- stats::setNames(
+    data.frame(Metabolite = names(top_vip), VIP = as.numeric(top_vip)),
+    c("Metabolite", "VIP")
+  )
+
+  # ------------------------------
+  # 4) Heatmap preparation
+  # ------------------------------
+  if (!group_col %in% colnames(metadata)) {
+    stop(sprintf("Column '%s' not found in metadata.", group_col))
+  }
+
   cluster_groups <- as.factor(metadata[[group_col]])
-  medias_por_cluster <- aggregate(
+
+  # Ensure metabolites exist in expression matrix
+  valid_metabs <- df_vip$Metabolite[df_vip$Metabolite %in% colnames(expr_mat)]
+  if (length(valid_metabs) == 0) {
+    stop("None of the top VIP metabolites were found in expr_matrix.")
+  }
+  df_vip <- df_vip[df_vip$Metabolite %in% valid_metabs, , drop = FALSE]
+
+  # Mean by cluster
+  medias_por_cluster <- stats::aggregate(
     expr_mat[, df_vip$Metabolite, drop = FALSE],
     by = list(Cluster = cluster_groups),
-    FUN = mean
+    FUN = base::mean
   )
 
   heatmap_long <- tidyr::pivot_longer(
@@ -105,26 +150,52 @@ metabol.vip <- function(dimred_data, top_n = 20, component = 1, plot = TRUE,
     values_to = "ValorMedio"
   )
 
-  heatmap_long <- dplyr::group_by(heatmap_long, Metabolite)
-  heatmap_long <- dplyr::mutate(heatmap_long, ValorZ = scale(ValorMedio)[,1])
+  heatmap_long <- dplyr::group_by(heatmap_long, .data$Metabolite)
+  heatmap_long <- dplyr::mutate(
+    heatmap_long,
+    ValorZ = as.numeric(scale(.data$ValorMedio)[, 1])
+  )
   heatmap_long <- dplyr::ungroup(heatmap_long)
 
   df_vip$Metabolite <- factor(df_vip$Metabolite, levels = rev(df_vip$Metabolite))
-  heatmap_long$Metabolite <- factor(heatmap_long$Metabolite, levels = levels(df_vip$Metabolite))
+  heatmap_long$Metabolite <- factor(
+    heatmap_long$Metabolite,
+    levels = levels(df_vip$Metabolite)
+  )
 
-  # --- Plots ---
+  # ------------------------------
+  # 5) Plots
+  # ------------------------------
   plot_vip <- plot_heatmap <- NULL
-  if(plot){
-    plot_vip <- ggplot2::ggplot(df_vip, ggplot2::aes(x = Metabolite, y = VIP)) +
+
+  if (plot) {
+    plot_vip <- ggplot2::ggplot(df_vip, ggplot2::aes(x = .data$Metabolite, y = .data$VIP)) +
       ggplot2::geom_point(size = 4) +
       ggplot2::coord_flip() +
       ggplot2::theme_minimal(base_size = 14) +
-      ggplot2::labs(title = paste("VIP Scores - Component", component), y = "VIP Score", x = NULL) +
+      ggplot2::labs(
+        title = paste("VIP Scores - Component", component),
+        y = "VIP Score",
+        x = NULL
+      ) +
       ggplot2::theme(panel.grid.major.y = ggplot2::element_blank())
 
-    plot_heatmap <- ggplot2::ggplot(heatmap_long, ggplot2::aes(x = as.factor(Cluster), y = Metabolite, fill = ValorZ)) +
+    plot_heatmap <- ggplot2::ggplot(
+      heatmap_long,
+      ggplot2::aes(
+        x = as.factor(.data$Cluster),
+        y = .data$Metabolite,
+        fill = .data$ValorZ
+      )
+    ) +
       ggplot2::geom_tile(color = "white") +
-      ggplot2::scale_fill_gradient2(low = "#4575b4", mid = "white", high = "#d73027", midpoint = 0, name = "Z-score") +
+      ggplot2::scale_fill_gradient2(
+        low = "#4575b4",
+        mid = "white",
+        high = "#d73027",
+        midpoint = 0,
+        name = "Z-score"
+      ) +
       ggplot2::theme_minimal(base_size = 14) +
       ggplot2::labs(x = "", y = NULL, title = "") +
       ggplot2::theme(
@@ -134,39 +205,51 @@ metabol.vip <- function(dimred_data, top_n = 20, component = 1, plot = TRUE,
         panel.grid = ggplot2::element_blank()
       )
 
+    # explicit print() is fine inside interactive plotting
     print(plot_vip + plot_heatmap + patchwork::plot_layout(widths = c(2.5, 1)))
   }
 
-  # --- Optional AUC calculation ---
+  # ------------------------------
+  # 6) Optional AUC calculation
+  # ------------------------------
   resultados_auc <- NULL
-  if(calc_auc){
+
+  if (calc_auc) {
     resultados_auc <- data.frame(Metabolite = character(), AUC = numeric())
     classe <- as.factor(metadata[[group_col]])
 
-    for(metab in df_vip$Metabolite){
-      roc_obj <- pROC::roc(classe, expr_mat[, metab], levels = levels(classe), direction = "<")
+    for (metab in df_vip$Metabolite) {
+      roc_obj <- pROC::roc(
+        response = classe,
+        predictor = expr_mat[, as.character(metab)],
+        levels = levels(classe),
+        direction = "<"
+      )
+
       auc_val <- as.numeric(pROC::auc(roc_obj))
-      resultados_auc <- rbind(resultados_auc, data.frame(Metabolite = metab, AUC = auc_val))
+      resultados_auc <- rbind(
+        resultados_auc,
+        data.frame(Metabolite = metab, AUC = auc_val)
+      )
     }
 
-    resultados_auc <- resultados_auc[order(-resultados_auc$AUC), ]
+    resultados_auc <- resultados_auc[order(-resultados_auc$AUC), , drop = FALSE]
   }
 
-  # --- Assign if requested ---
-  if(assign_result) assign(assign_name, list(
+  # ------------------------------
+  # 7) Assign + Return
+  # ------------------------------
+  result <- list(
     vip_scores = vip_scores,
     top_vip = df_vip,
     auc = resultados_auc,
     plot_vip = plot_vip,
     plot_heatmap = plot_heatmap
-  ), envir = envir)
+  )
 
-  invisible(list(
-    vip_scores = vip_scores,
-    top_vip = df_vip,
-    auc = resultados_auc,
-    plot_vip = plot_vip,
-    plot_heatmap = plot_heatmap
-  ))
+  if (assign_result) {
+    base::assign(assign_name, result, envir = envir)
+  }
+
+  invisible(result)
 }
-

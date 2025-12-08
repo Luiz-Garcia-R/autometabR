@@ -45,33 +45,99 @@
 #'
 #' @export
 
-metabol.roc <- function(normalized_data, metadata, metabolites, group = "Group", plot = TRUE) {
+metabol.roc <- function(normalized_data,
+                        metadata = NULL,
+                        metabolites,
+                        group = "Group",
+                        plot = TRUE) {
 
-  if (!requireNamespace("pROC", quietly = TRUE)) stop("Package 'pROC' required.")
+  if (!requireNamespace("pROC", quietly = TRUE))
+    stop("Package 'pROC' required.")
 
+  # ------------------------------------------------------------
+  # 1) validate metabolites
+  # ------------------------------------------------------------
   metabolites <- as.character(metabolites)
 
-  # --- Extract normalized matrix (expr_matrix) ---
-  if (!"expr_matrix" %in% names(normalized_data)) stop("normalized_data must contain 'expr_matrix'.")
-  data_mat <- normalized_data$expr_matrix  # <- aqui
+  # ------------------------------------------------------------
+  # 2) Detect expr_matrix
+  # ------------------------------------------------------------
+  if (!is.list(normalized_data) || !"expr_matrix" %in% names(normalized_data))
+    stop("normalized_data must be the list returned by metabol.normalize() and contain 'expr_matrix'.")
 
-  if (!group %in% colnames(metadata)) stop(paste("The column", group, "was not found in metadata"))
+  data_mat <- normalized_data$expr_matrix
+
+  # Remover coluna Sample se existir
+  if ("Sample" %in% colnames(data_mat)) {
+    rownames(data_mat) <- data_mat$Sample
+    data_mat <- data_mat[, setdiff(colnames(data_mat), "Sample"), drop = FALSE]
+  }
+
+  # ------------------------------------------------------------
+  # 3) Detect metadata
+  # ------------------------------------------------------------
+  if (is.null(metadata)) {
+    if (!is.null(normalized_data$metadata)) {
+      metadata <- normalized_data$metadata
+      message("Using metadata stored inside normalized_data.")
+    } else {
+      stop("metadata not provided and none found inside normalized_data.")
+    }
+  }
+
+  if (!"Sample" %in% colnames(metadata))
+    stop("metadata must contain a column called 'Sample'.")
+
+  if (!group %in% colnames(metadata))
+    stop(paste0("metadata must contain column '", group, "'."))
+
+  # ------------------------------------------------------------
+  # 4) Align metadata <-> expr_matrix
+  # ------------------------------------------------------------
+  common_samples <- intersect(rownames(data_mat), metadata$Sample)
+  if (length(common_samples) == 0)
+    stop("No overlapping sample names between expr_matrix and metadata$Sample.")
+
+  metadata <- metadata[match(common_samples, metadata$Sample), , drop = FALSE]
+  data_mat <- data_mat[common_samples, , drop = FALSE]
+
+  # ------------------------------------------------------------
+  # 5) Prepare model
+  # ------------------------------------------------------------
   classe <- as.factor(metadata[[group]])
   group_levels <- levels(classe)
 
   if (length(metabolites) > 3) {
-    message("Warning: Using more than 3 metabolites may lead to overfitting and artificially high AUC values.")
+    message("Warning: Using more than 3 metabolites may inflate AUC due to overfitting.")
   }
 
-  combined_data <- data_mat[, metabolites, drop = FALSE]
+  # Check metabolites
+  missing_met <- setdiff(metabolites, colnames(data_mat))
+  if (length(missing_met))
+    stop("These metabolites were not found in the expression matrix: ",
+         paste(missing_met, collapse = ", "))
 
-  logit_model <- stats::glm(classe ~ ., data = combined_data, family = stats::binomial)
+  combined_data <- data.frame(classe, data_mat[, metabolites, drop = FALSE])
+
+  # ------------------------------------------------------------
+  # 6) Adjusts logistic model
+  # ------------------------------------------------------------
+  formula_str <- paste("classe ~", paste(metabolites, collapse = " + "))
+  logit_model <- stats::glm(stats::as.formula(formula_str),
+                            data = combined_data,
+                            family = stats::binomial)
+
   pred <- stats::predict(logit_model, type = "response")
 
+  # ------------------------------------------------------------
+  # 7) ROC e AUC
+  # ------------------------------------------------------------
   roc_comb <- pROC::roc(classe, pred, levels = group_levels, direction = "<")
   auc_comb <- pROC::auc(roc_comb)
 
-  # --- Plot ---
+  # ------------------------------------------------------------
+  # 8) Plot
+  # ------------------------------------------------------------
   if (plot) {
     plot(1 - roc_comb$specificities, roc_comb$sensitivities,
          type = "l", col = "#1f77b4", lwd = 3,
@@ -80,14 +146,21 @@ metabol.roc <- function(normalized_data, metadata, metabolites, group = "Group",
          ylab = "True Positive Rate",
          xlim = c(0,1), ylim = c(0,1),
          bty = "n", las = 1)
-    mtext(side = 3, line = 0.5, at = mean(par("usr")[1:2]),
-          text = paste("Metabolites:", paste(metabolites, collapse = " + ")), cex = 1)
+
+    mtext(side = 3, line = 0.5,
+          at = mean(par("usr")[1:2]),
+          text = paste("Metabolites:", paste(metabolites, collapse = " + ")),
+          cex = 1)
+
     abline(a = 0, b = 1, col = "#d3d3d3", lty = 2, lwd = 2)
-    text(0.8, 0.05, paste("AUC =", round(auc_comb, 3)), col = "#1f77b4", cex = 1.2, font = 2)
+    text(0.8, 0.05, paste("AUC =", round(auc_comb, 3)),
+         col = "#1f77b4", cex = 1.2, font = 2)
     grid(col = "lightgray", lty = "dotted")
   }
 
-  # --- Return object ---
+  # ------------------------------------------------------------
+  # 9) Return
+  # ------------------------------------------------------------
   invisible(list(
     roc_object = roc_comb,
     auc = auc_comb,
@@ -101,4 +174,3 @@ metabol.roc <- function(normalized_data, metadata, metabolites, group = "Group",
     )
   ))
 }
-

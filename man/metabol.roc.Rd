@@ -6,7 +6,7 @@
 \usage{
 metabol.roc(
   normalized_data,
-  metadata,
+  metadata = NULL,
   metabolites,
   group = "Group",
   plot = TRUE

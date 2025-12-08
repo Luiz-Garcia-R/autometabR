@@ -66,13 +66,11 @@ The recommended workflow guides users from raw data import to quality control an
 # Exploratory and differential analysis
 For deeper insights and group comparisons:
   - metabol.corr() – Compute correlations among samples or experimental groups.
-  - metabol.dems() – Identify differentially expressed metabolites between conditions.
+  - metabol.diff() – Identify differentially expressed metabolites between conditions.
   - metabol.dimred() – Perform dimensionality reduction using PCA and UMAP.
   - metabol.heatmap() – Visualize top variable metabolites with heatmaps.
   - metabol.oplsda() – Evaluate group differences via OPLS-DA.
   - metabol.roc() – Assess the discriminatory power of specific metabolites.
-  - metabol.ttest() – Perform t-tests or Mann-Whitney tests for metabolite-level differences.
-  - metabol.venn() – Visualize overlaps between metabolite sets with Venn diagrams.
   - metabol.vip() – Highlight the most important metabolites contributing to group separation.
   - metabol.volcano() – Generate volcano plots for differential metabolite analysis.
 
@@ -106,7 +104,7 @@ normalized_data <- metabol.normalize(obj)
 metabol.qc(normalized_data)
 
 # Correlation
-corr_mat <- metabol.corr(normalized_data, metadata)
+corr_mat <- metabol.corr(normalized_data)
 ```
 
 ## Contact

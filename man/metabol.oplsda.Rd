@@ -6,7 +6,7 @@
 \usage{
 metabol.oplsda(
   normalized_data,
-  metadata,
+  metadata = NULL,
   group_col = "Group",
   predI = 1,
   orthoI = NA,

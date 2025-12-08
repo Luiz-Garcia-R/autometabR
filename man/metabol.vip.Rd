@@ -5,7 +5,7 @@
 \title{VIP Scores and Heatmap for Dimensionality Reduction Results}
 \usage{
 metabol.vip(
-  dimred_data,
+  normalized_data,
   top_n = 20,
   component = 1,
   plot = TRUE,
@@ -17,7 +17,7 @@ metabol.vip(
 )
 }
 \arguments{
-\item{dimred_data}{Object from metabol.dimred().}
+\item{normalized_data}{Object from metabol.dimred().}
 
 \item{top_n}{Integer, number of top metabolites to display. Default = 20.}
 

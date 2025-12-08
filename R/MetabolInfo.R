@@ -39,7 +39,8 @@
 #'
 #' @export
 
-metabol.info <- function(normalized_data, metadata, group_col = "Group") {
+metabol.info <- function(normalized_data, metadata = NULL, group_col = "Group") {
+
   # ---- check input ----
   if (!is.list(normalized_data) || is.null(normalized_data$expr_matrix)) {
     stop("Input must be a list returned by metabol.normalize() containing 'expr_matrix'.")
@@ -47,7 +48,25 @@ metabol.info <- function(normalized_data, metadata, group_col = "Group") {
 
   data_mat <- normalized_data$expr_matrix
 
-  # --- Remove Sample column se existir ---
+  # ---- Detectar metadata automaticamente caso não fornecido ----
+  if (is.null(metadata)) {
+    if (!is.null(normalized_data$metadata)) {
+      message("Using metadata stored inside normalized_data.")
+      metadata <- normalized_data$metadata
+    } else {
+      stop("Metadata not provided and not found inside normalized_data$metadata.")
+    }
+  }
+
+  # --- check metadata structure ---
+  if (!"Sample" %in% colnames(metadata)) {
+    stop("metadata must contain the column 'Sample'.")
+  }
+  if (!group_col %in% colnames(metadata)) {
+    stop(sprintf("metadata must contain the column '%s'.", group_col))
+  }
+
+  # --- Remove Sample column se existir em data_mat ---
   if ("Sample" %in% colnames(data_mat)) {
     rownames(data_mat) <- data_mat$Sample
     data_mat <- data_mat[, setdiff(colnames(data_mat), "Sample"), drop = FALSE]
@@ -57,11 +76,13 @@ metabol.info <- function(normalized_data, metadata, group_col = "Group") {
   data_mat <- as.matrix(data_mat)
   storage.mode(data_mat) <- "numeric"
 
-  if (!"Sample" %in% colnames(metadata)) stop("metadata must contain the column 'Sample'.")
-  if (!group_col %in% colnames(metadata)) stop(sprintf("metadata must contain the column '%s'.", group_col))
-
   # ---- align samples ----
   common_samples <- intersect(rownames(data_mat), metadata$Sample)
+
+  if (length(common_samples) == 0) {
+    stop("No sample names in common between expression matrix and metadata.")
+  }
+
   data_mat <- data_mat[common_samples, , drop = FALSE]
   metadata <- metadata[match(common_samples, metadata$Sample), , drop = FALSE]
 
@@ -86,6 +107,7 @@ metabol.info <- function(normalized_data, metadata, group_col = "Group") {
   # ---- metabolite-level summaries ----
   metab_nonzero <- colSums(data_mat > 0, na.rm = TRUE)
   metab_detect_rate <- metab_nonzero / n_samples
+
   metab_summary <- data.frame(
     Metabolite = colnames(data_mat),
     Detected_in_samples = metab_nonzero,
@@ -105,6 +127,7 @@ metabol.info <- function(normalized_data, metadata, group_col = "Group") {
     group_summary = group_summary,
     metabolite_summary = metab_summary
   )
+
   class(out) <- "metabolInfo"
   return(out)
 }
@@ -122,10 +145,10 @@ print.metabolInfo <- function(x, ...) {
   message("Missing values: ", x$missing_total, " (", round(x$missing_perc,1), "%)")
   message("Mean concentration: ", round(x$mean_concentration, 3))
   message("SD concentration:   ", round(x$sd_concentration, 3))
-  message("Range:             [", round(x$range_concentration[1],3), ", ", round(x$range_concentration[2],3), "]")
+  message("Range:             [",
+          round(x$range_concentration[1],3), ", ",
+          round(x$range_concentration[2],3), "]")
   message("===============================")
   message("Tip: assign to a variable and access details with $group_summary or $metabolite_summary")
   invisible(x)
 }
-
-

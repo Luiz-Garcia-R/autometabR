@@ -23,15 +23,13 @@
 #' | `metabol.qc()`       | QC plots: boxplots, PCA, density distributions |
 #' | `metabol.info()`     | Summarize metabolites and group statistics |
 #' | `metabol.corr()`     | Sample/group correlation matrices |
-#' | `metabol.dems()`     | Identify differentially expressed metabolites |
-#' | `metabol.dimred()`   | PCA and UMAP for dimensionality reduction |
+#' | `metabol.diff()`     | Identify differentially expressed metabolites |
+#' | `metabol.dimred()`   | PCA, UMAP and PLS-DA for dimensionality reduction |
 #' | `metabol.enrich()`   | Metabolite set enrichment analysis |
 #' | `metabol.heatmap()`  | Heatmap of top variable metabolites |
 #' | `metabol.oplsda()`   | Group separation via OPLS-DA |
 #' | `metabol.roc()`      | ROC curves for discriminant metabolites |
-#' | `metabol.ttest()`    | T-test or Mann-Whitney test |
-#' | `metabol.anova()`    | ANOVA or Kruskal-Wallis test |
-#' | `metabol.venn()`     | Overlap visualization with Venn diagrams |
+#' | `metabol.boxplot()`  | Boxplot based on log2FC difference |
 #' | `metabol.vip()`      | Highlight top contributing metabolites |
 #'
 #' Contact and Contributions
@@ -70,11 +68,11 @@
 #' normalized <- metabol.normalize(imp_data)
 #'
 #' # QC
-#' metabol.qc(normalized, metadata)
+#' metabol.qc(normalized)
 #'
 #' # Exploratory and differential analysis
-#' metabol.corr(normalized, metadata)
-#' metabol.dems(normalized, metadata)
+#' metabol.corr(normalized)
+#' metabol.dimred(normalized)
 #'
 #' # Print summary of normalization
 #' print(normalized)
