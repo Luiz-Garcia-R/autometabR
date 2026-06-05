@@ -13,11 +13,11 @@ Workflows involving multiple groups can be explored, but most functions are tune
 You can install the development version directly from GitHub:
 
 ```r
-# Install devtools if you haven't already
-install.packages("devtools")
+# Install remotes if you haven't already
+install.packages("remotes")
 
 # Install autometabR from GitHub
-devtools::install_github("Luiz-Garcia-R/autometabR")
+remotes::install_github("Luiz-Garcia-R/autometabR")
 ```
 
 ## Input Data Format (Very Important)
