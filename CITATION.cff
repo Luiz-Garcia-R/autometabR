@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+title: "autometabR"
+message: "If you use this software, please cite it as below."
+type: software
+
+authors:
+  - family-names: Cardoso Garcia
+    given-names: Luiz Fernando
+    affiliation: Universidade Federal do Paraná
+    orcid: "https://orcid.org/0000-0002-9616-0927"
+
+abstract: >
+  AutometabR is a R package that provides a suite of functions for metabolomics data analysis.
+  It Supports raw data import, normalization, quality control,
+  and visualization, including heatmaps, PCA, UMAP, association matrices,
+  and boxplots. Includes statistical testing such as Limmma t-test,
+  aassociation, as well as dimensionality reduction and biomarker discovery tools.
+  Designed for ease of use and reproducible workflows in metabolomics research.
+
+keywords:
+  - Metabolomics
+  - bioinformatics
+  - R
+
+version: "0.1.6"
+date-released: 2026-06-05
+
+repository-code: "https://github.com/Luiz-Garcia-R/autometabR"
+url: "https://github.com/Luiz-Garcia-R/autometabR"
+
+license: "MIT"

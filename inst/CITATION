@@ -1,0 +1,13 @@
+citHeader("To cite autometabR:")
+
+bibentry(
+  bibtype = "Manual",
+  title   = "autometabR: Tools for streamlined metabolomics data analysis",
+  author  = person(
+    "Luiz Fernando", "Cardoso Garcia",
+    comment = "Universidade Federal do Paraná"
+  ),
+  year    = "2026",
+  note    = "R package version 0.1.5",
+  url     = "https://github.com/Luiz-Garcia-R/autometabR"
+)

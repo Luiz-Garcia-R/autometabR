@@ -200,6 +200,10 @@ metabol.diff <- function(normalized_data,
     message("Contrast used: ", contrast)
   }
 
+  if (!is.character(contrast)) {
+    stop("contrast must be a character vector.")
+  }
+
   contrast_matrix <- limma::makeContrasts(
     contrasts = contrast,
     levels = design
@@ -212,19 +216,28 @@ metabol.diff <- function(normalized_data,
   fit2 <- limma::contrasts.fit(fit, contrast_matrix)
   fit2 <- limma::eBayes(fit2)
 
-  results <- limma::topTable(fit2, number = Inf, sort.by = "none")
+  coef_names <- colnames(fit2$coefficients)
 
-  results$Metabolite <- rownames(results)
-  results <- results[, c("Metabolite", "logFC", "AveExpr", "t",
-                         "P.Value", "adj.P.Val", "B")]
+  results_list <- lapply(coef_names, function(coef) {
+    tt <- limma::topTable(fit2, coef = coef, number = Inf, sort.by = "none")
+
+    tt$Metabolite <- rownames(tt)
+    tt$contrast <- coef
+
+    tt[, c("Metabolite", "contrast", "logFC", "AveExpr", "t",
+           "P.Value", "adj.P.Val", "B")]
+  })
+
+  results <- do.call(rbind, results_list)
 
   # ------------------------------------------------------------
   # 9) Attach results to object
   # ------------------------------------------------------------
   normalized_data$limma_results <- list(
     results = results,
+    contrasts = colnames(fit2$coefficients),
+    contrast_input = contrast,
     design = design,
-    contrast = contrast,
     fit = fit2,
     metadata = metadata2,
     expr_used = expr_mat

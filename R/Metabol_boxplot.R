@@ -54,7 +54,6 @@
 #'
 #' @export
 
-
 metabol.boxplot <- function(normalized_data,
                             metadata = NULL,
                             metabolite,
